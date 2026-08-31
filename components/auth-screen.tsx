@@ -13,7 +13,9 @@ export function AuthScreen() {
   const [error, setError] = useState("");
 
   function verificationSettings() {
-    return { url: `${window.location.origin}/`, handleCodeInApp: false };
+    const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+    if (!authDomain) throw new Error("Firebase authentication domain is not configured.");
+    return { url: `https://${authDomain}/`, handleCodeInApp: false };
   }
 
   async function submit(event: React.FormEvent) {

@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet, decodeJwt, decodeProtectedHeader, jwtVerify } from "jose";
 import { NextResponse } from "next/server";
 
 const firebaseKeys = createRemoteJWKSet(
@@ -37,7 +37,24 @@ export async function authenticateRequest(request: Request): Promise<Authenticat
       return authError("This account is not authorised for StudioCopilot.", 403);
     }
     return { uid: payload.sub, email, name: typeof payload.name === "string" ? payload.name : undefined };
-  } catch {
+  } catch (error) {
+    let tokenMetadata: { audience?: string; issuer?: string; keyId?: string } = {};
+    try {
+      const claims = decodeJwt(token);
+      const header = decodeProtectedHeader(token);
+      tokenMetadata = {
+        audience: Array.isArray(claims.aud) ? claims.aud.join(",") : claims.aud,
+        issuer: claims.iss,
+        keyId: header.kid
+      };
+    } catch {
+      tokenMetadata = { audience: "unreadable", issuer: "unreadable", keyId: "unreadable" };
+    }
+    console.error("Firebase ID token verification failed", {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorCode: typeof error === "object" && error && "code" in error ? String(error.code) : "unknown",
+      ...tokenMetadata
+    });
     return authError("Your session is invalid or expired. Please sign in again.", 401);
   }
 }
