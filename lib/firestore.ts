@@ -29,11 +29,18 @@ export async function saveProductionResource(
   resource: ProductionResource,
   items: ProductionItem[]
 ) {
+  return saveProductionChanges(productionId, { [resource]: items });
+}
+
+export async function saveProductionChanges(
+  productionId: string,
+  changes: Partial<Pick<ProductionContext, ProductionResource>>
+) {
   const reference = firestore().collection("productions").doc(productionId);
   const snapshot = await reference.get();
   if (!snapshot.exists && productionId !== demoProduction.id) throw new Error("Production not found");
   const base = snapshot.exists ? snapshot.data() as ProductionContext : demoProduction;
-  await reference.set({ ...base, [resource]: items, updatedAt: FieldValue.serverTimestamp() });
+  await reference.set({ ...base, ...changes, updatedAt: FieldValue.serverTimestamp() });
 }
 
 export async function saveAgentLog(productionId: string, question: string, result: DecisionResponse) {

@@ -41,6 +41,7 @@ export interface ProductionContext {
   crew: CrewMember[];
   shootDays: ShootDay[];
   locations: ProductionLocation[];
+  memberUids?: string[];
 }
 
 export interface Source {

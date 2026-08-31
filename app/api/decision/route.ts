@@ -4,6 +4,7 @@ import { loadProduction, saveAgentLog } from "@/lib/firestore";
 import { runDecisionAgent } from "@/lib/gemini";
 import { searchProductionContext } from "@/lib/parallel";
 import { decisionRequestSchema } from "@/lib/schemas";
+import { authenticateRequest } from "@/lib/firebase-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,6 +14,8 @@ function clientError(message: string, status = 400) {
 }
 
 export async function POST(request: Request) {
+  const user = await authenticateRequest(request);
+  if (user instanceof NextResponse) return user;
   let body: unknown;
   try {
     body = await request.json();
@@ -32,6 +35,9 @@ export async function POST(request: Request) {
 
   try {
     const production = await loadProduction(parsed.data.productionId);
+    if (production.memberUids?.length && !production.memberUids.includes(user.uid)) {
+      return clientError("You do not have access to this production.", 403);
+    }
     const locations = production.shootDays.map((day) => day.location).join("; ");
     const objective = "Find current, authoritative information relevant to this film-production decision: " +
       parsed.data.message + ". Production locations: " + locations +

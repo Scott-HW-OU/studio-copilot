@@ -3,10 +3,15 @@
 import { useState } from "react";
 import {
   AlertTriangle, CalendarDays, Check, ChevronRight, CircleDollarSign, CloudRain,
-  ExternalLink, Film, MapPin, Menu, Radio, Search, Send, Sparkles, Users, X
+  ExternalLink, Film, LogOut, MapPin, Menu, Radio, Search, Send, Sparkles, Users, X
 } from "lucide-react";
+import { signOut } from "firebase/auth";
 import { demoProduction } from "@/lib/demo-data";
+import { clientAuth } from "@/lib/firebase-client";
 import type { AgentFinding, DecisionResponse } from "@/lib/types";
+import { useAuth } from "./auth-provider";
+import { AuthScreen } from "./auth-screen";
+import { ProductionModules } from "./production-modules";
 
 const quickQuestions = [
   "Can we move Thursday's outdoor shoot to Saturday?",
@@ -44,20 +49,25 @@ function AgentResult({ finding }: { finding: AgentFinding }) {
 }
 
 export function StudioDashboard() {
+  const { user, loading: authLoading, token } = useAuth();
   const [message, setMessage] = useState(quickQuestions[0]);
   const [response, setResponse] = useState<DecisionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
 
+  if (authLoading) return <main className="auth-shell"><div className="module-loading">Checking your session…</div></main>;
+  if (!user) return <AuthScreen />;
+
   async function askDecisionAgent() {
     if (loading || message.trim().length < 3) return;
     setLoading(true);
     setError("");
     try {
+      const authToken = await token();
       const request = await fetch("/api/decision", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ message, productionId: demoProduction.id })
       });
       const data = await request.json();
@@ -77,9 +87,9 @@ export function StudioDashboard() {
         <button className="nav-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X /></button>
         <nav>
           <a className="active" href="#overview"><Sparkles size={18} />Command centre</a>
-          <a href="#schedule"><CalendarDays size={18} />Schedule</a>
-          <a href="#crew"><Users size={18} />Crew</a>
-          <a href="#locations"><MapPin size={18} />Locations</a>
+          <a href="#schedule-module"><CalendarDays size={18} />Schedule</a>
+          <a href="#crew-module"><Users size={18} />Crew</a>
+          <a href="#locations-module"><MapPin size={18} />Locations</a>
           <a href="#risks"><AlertTriangle size={18} />Risk reports</a>
         </nav>
         <div className="production-switcher">
@@ -91,6 +101,7 @@ export function StudioDashboard() {
           <div><Radio size={14} /> Live integrations</div>
           <span>Gemini on Vertex AI</span>
           <span>Parallel Search API</span>
+          <button className="sign-out" onClick={() => signOut(clientAuth)}><LogOut size={13} />Sign out</button>
         </div>
       </aside>
 
@@ -177,6 +188,7 @@ export function StudioDashboard() {
               <p className="coverage-copy"><Check size={15} /> All 6 essential roles confirmed</p>
             </article>
           </section>
+          <ProductionModules />
         </div>
       </section>
     </main>
