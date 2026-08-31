@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /productions/{productionId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.productionIds.hasAny([productionId]);
+    }
+    match /agent_logs/{logId} {
+      allow read: if request.auth != null
+        && request.auth.token.productionIds.hasAny([resource.data.productionId]);
+      allow create: if false; // Server-side service account only.
+      allow update, delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

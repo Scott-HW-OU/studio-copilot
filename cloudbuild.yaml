@@ -1,0 +1,13 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/studiocopilot:$COMMIT_SHA", "."]
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/studiocopilot:$COMMIT_SHA"]
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args: ["run", "deploy", "studiocopilot", "--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/studiocopilot:$COMMIT_SHA", "--region=${_REGION}", "--platform=managed", "--allow-unauthenticated", "--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=gemini-2.5-pro,STUDIOCOPILOT_DEMO_MODE=false", "--set-secrets=PARALLEL_API_KEY=parallel-api-key:latest"]
+substitutions:
+  _REGION: europe-west2
+  _REPOSITORY: studiocopilot
+options:
+  logging: CLOUD_LOGGING_ONLY
