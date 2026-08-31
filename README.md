@@ -66,8 +66,10 @@ Set-Content -NoNewline .parallel-secret '<YOUR_PARALLEL_API_KEY>'
 gcloud secrets create parallel-api-key --data-file=.parallel-secret
 Remove-Item .parallel-secret
 $firebaseApiKey = '<FIREBASE_WEB_API_KEY>'
+$firebaseProjectId = 'your-firebase-project-id'
+$firebaseAuthDomain = "$firebaseProjectId.firebaseapp.com"
 $allowedEmails = 'producer@example.com;admin@example.com'
-gcloud builds submit --config cloudbuild.yaml --substitutions="_FIREBASE_API_KEY=$firebaseApiKey,_FIREBASE_AUTH_DOMAIN=studio-copilot-507209.firebaseapp.com,_ALLOWED_EMAILS=$allowedEmails"
+gcloud builds submit --config cloudbuild.yaml --substitutions="_FIREBASE_API_KEY=$firebaseApiKey,_FIREBASE_AUTH_DOMAIN=$firebaseAuthDomain,_FIREBASE_PROJECT_ID=$firebaseProjectId,_ALLOWED_EMAILS=$allowedEmails"
 ~~~
 
 Grant the Cloud Run runtime service account roles/aiplatform.user, roles/datastore.user, and Secret Manager access to parallel-api-key. Enable Firebase Authentication for the same project and create a Web app before building. The /api/health endpoint reports configuration without exposing credentials.

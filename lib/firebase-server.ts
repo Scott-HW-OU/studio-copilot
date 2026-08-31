@@ -16,7 +16,7 @@ export function authError(message: string, status: number) {
 }
 
 export async function authenticateRequest(request: Request): Promise<AuthenticatedUser | NextResponse> {
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+  const projectId = process.env.FIREBASE_AUTH_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
   if (!projectId) return authError("Firebase Authentication is not configured.", 503);
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return authError("Sign in is required.", 401);

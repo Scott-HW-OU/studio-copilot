@@ -12,19 +12,23 @@ export function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  function verificationSettings() {
+    return { url: `${window.location.origin}/`, handleCodeInApp: false };
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true); setError("");
     try {
       if (registering) {
         const result = await createUserWithEmailAndPassword(clientAuth, email, password);
-        await sendEmailVerification(result.user);
+        await sendEmailVerification(result.user, verificationSettings());
         await clientAuth.signOut();
         setError("Verification email sent. Verify the address, then sign in.");
       } else {
         const result = await signInWithEmailAndPassword(clientAuth, email, password);
         if (!result.user.emailVerified) {
-          await sendEmailVerification(result.user);
+          await sendEmailVerification(result.user, verificationSettings());
           await clientAuth.signOut();
           throw new Error("Verify your email first. A new verification email has been sent.");
         }
