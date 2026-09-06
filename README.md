@@ -1,122 +1,168 @@
 # StudioCopilot
 
-StudioCopilot is an evidence-backed production operations centre for film and television crews. A producer asks a decision question; the application coordinates six specialist perspectives, combines private schedule, crew, and cost records with current public-web research, and returns one actionable recommendation.
+**Evidence-backed production decisions for film teams.**
 
-**Hackathon track:** Parallel Search API + Google Cloud  
-**Platform:** Web  
-**AI policy:** Gemini on Vertex AI only. No other model, AI API, or agent framework is used.
+StudioCopilot brings scheduling, crew availability, location records, cost exposure, current public-web research, and AI reasoning into one decision workspace. It helps a production manager answer questions such as:
 
-## What works
+> Can we move Thursday's outdoor shoot to Saturday?
 
-- Responsive dashboard with shoot days, locations, crew coverage, and risk state.
-- Six-role workflow: Production Manager, Research, Weather & Risk, Crew, Budget, and Decision.
-- Live Parallel Search API call through the official parallel-web SDK.
-- Live Gemini 2.5 Pro call on Vertex AI through the official @google/genai SDK.
-- Firestore production reads and agent audit-log writes.
-- Firebase Authentication with verified email/password and Google sign-in.
-- Authenticated Schedule, Crew, and Locations modules with validated CRUD APIs.
-- Clickable research sources, confidence, risks, and recommended human actions.
-- Explicit demo mode that never presents sample weather or web evidence as live.
-- Cloud Run container and Cloud Build deployment definition.
+The result is a recommendation with confidence, risks, next actions, specialist findings, and links to the public sources used. StudioCopilot supports the human making the decision; it does not change production records or approve a schedule automatically.
 
-The design uses deterministic orchestration around one Gemini Decision Agent call. Each specialist returns a separately visible finding. This keeps latency and cost suitable for a live demo while retaining clear agent responsibilities.
+![StudioCopilot decision workspace](public/studiocopilot-devpost-hero.png)
 
-## Required runtime integrations
+## Judge walkthrough (about 3 minutes)
 
-- lib/parallel.ts creates the official Parallel client and calls client.beta.search at request time.
-- lib/gemini.ts creates a Vertex-backed GoogleGenAI client and calls ai.models.generateContent.
-- app/api/decision/route.ts orchestrates Parallel first, passes its cited evidence to Gemini, and returns the combined decision.
+Use the deployed application link and judge account supplied with the submission. Judge credentials are intentionally not stored in this public repository.
 
-Search results are treated as untrusted data, not prompt instructions. The agent may not invent current facts and must defer permit, legal, drone, weather-safety, and final scheduling decisions to official sources and qualified crew.
+1. **Sign in** with the supplied account. Firebase Authentication protects the workspace and server APIs.
+2. In **Command centre**, keep the prepared question — **“Can we move Thursday's outdoor shoot to Saturday?”** — and select **Analyse decision**.
+3. Review the recommendation, confidence score, key risks, recommended actions, and the six specialist findings:
+   - Production Manager
+   - Research
+   - Weather & Risk
+   - Crew
+   - Budget
+   - Decision
+4. In a live deployment, open the **Parallel research sources** to inspect the evidence behind the answer.
+5. Scroll to **Shoot schedule**, **Crew directory**, and **Location directory**. Use **Add new** or the edit control to see the authenticated production-management workflow.
+6. Notice the safety boundary: the agent proposes actions for human approval and does not silently rewrite the schedule.
+
+If the result is labelled **DEMO ANALYSIS**, it is a deterministic sample and makes no claim to current weather, permits, or web research. A judged production deployment should be labelled **LIVE ANALYSIS**.
+
+## Why it matters
+
+A seemingly simple schedule change can affect crew availability, equipment hire, permits, weather exposure, transport, and location access. That evidence is normally spread across production records and the public web. StudioCopilot coordinates it into one auditable answer while keeping the production manager in control.
+
+## How it works
+
+```text
+Production question
+        |
+        +--> Firestore production context (schedule, crew, locations, costs)
+        +--> Parallel Search API (current public-web evidence and sources)
+        |
+        v
+Gemini on Vertex AI (structured multi-factor reasoning)
+        |
+        v
+Recommendation + confidence + risks + actions + citations
+        |
+        v
+Human review and approval
+```
+
+The server runs Parallel research first, then gives that cited evidence and the relevant production data to Gemini. The response is validated and displayed as six understandable specialist findings. Production CRUD APIs are authenticated separately and validated with Zod.
+
+## Main features
+
+- Evidence-backed production decision assistant
+- Current web research through the Parallel Search API
+- Structured reasoning with Gemini on Vertex AI
+- Source links shown alongside live recommendations
+- Editable schedule, crew, and location modules backed by Firestore
+- Email/password and Google sign-in through Firebase Authentication
+- Verified-email and server-side account allowlist enforcement
+- Explicit live/demo labelling and fail-closed integration errors
+- Responsive production dashboard
+
+## Technology
+
+- Next.js 16, React 19, and TypeScript
+- Gemini via the Google Gen AI SDK and Vertex AI
+- Parallel Search API via `parallel-web`
+- Firebase Authentication
+- Google Cloud Firestore
+- Cloud Run, Cloud Build, and Artifact Registry
+- Zod, Vitest, and ESLint
 
 ## Run locally
 
-Prerequisites: Node.js 22, a Google Cloud project with Vertex AI and Firestore enabled, Google Application Default Credentials, and a Parallel API key.
+### Prerequisites
 
-~~~powershell
+- Node.js 22+
+- A Firebase project with Authentication enabled
+- Google Cloud Application Default Credentials with access to Vertex AI and Firestore
+- A Parallel API key
+
+Install and configure:
+
+```powershell
+npm.cmd ci
 Copy-Item .env.example .env.local
-gcloud auth application-default login
-npm.cmd install
+```
+
+Edit `.env.local` with your own project settings. Never commit secrets or a service-account key.
+
+For live analysis, configure:
+
+```dotenv
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=global
+GEMINI_MODEL=gemini-2.5-pro
+FIRESTORE_DATABASE_ID=(default)
+PARALLEL_API_KEY=your-parallel-api-key
+STUDIOCOPILOT_DEMO_MODE=false
+
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-web-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_AUTH_PROJECT_ID=your-project-id
+STUDIOCOPILOT_ALLOWED_EMAILS=judge@example.com
+```
+
+Authenticate locally with Google Cloud, then start the app:
+
+```powershell
+gcloud.cmd auth application-default login
+gcloud.cmd auth application-default set-quota-project your-project-id
 npm.cmd run dev
-~~~
+```
 
-Set GOOGLE_CLOUD_PROJECT, PARALLEL_API_KEY, the three NEXT_PUBLIC_FIREBASE_* web-app values, and STUDIOCOPILOT_ALLOWED_EMAILS in .env.local, then open http://localhost:3000. Enable Email/Password and Google providers in Firebase Authentication. STUDIOCOPILOT_ALLOWED_EMAILS is a required, semicolon-separated allowlist; an absent list fails closed.
+Open [http://localhost:3000](http://localhost:3000).
 
-All production and decision APIs require a verified Firebase ID token. The client sends the token as `Authorization: Bearer <token>`; the server verifies its Google signature, issuer, audience, expiry, and verified-email claim. If a production document defines `memberUids`, access is further restricted to those Firebase user IDs.
+### Demo mode
 
-## Production modules and endpoints
+Set `STUDIOCOPILOT_DEMO_MODE=true` to return the clearly labelled sample decision without calling Gemini or Parallel. Firebase configuration, a verified sign-in, an allowlisted email, and Firestore access are still required for the protected workspace and production modules.
 
-- `GET/POST /api/productions/:productionId/schedule`
-- `PATCH/DELETE /api/productions/:productionId/schedule/:itemId`
-- `GET/POST /api/productions/:productionId/crew`
-- `PATCH/DELETE /api/productions/:productionId/crew/:itemId`
-- `GET/POST /api/productions/:productionId/locations`
-- `PATCH/DELETE /api/productions/:productionId/locations/:itemId`
+## Validation
 
-Schedule records reference a location and assigned crew. Locations used by a shoot day cannot be deleted. Payloads are bounded and validated with Zod before Firestore writes.
+Run the project checks with:
 
-To inspect the interface without cloud credentials, set STUDIOCOPILOT_DEMO_MODE=true. Demo results are labeled and the Research and Weather agents are marked skipped. Do not enable demo mode in the judged deployment.
-
-## Deploy to Google Cloud Run
-
-~~~powershell
-gcloud services enable aiplatform.googleapis.com firestore.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
-gcloud artifacts repositories create studiocopilot --repository-format=docker --location=europe-west2
-Set-Content -NoNewline .parallel-secret '<YOUR_PARALLEL_API_KEY>'
-gcloud secrets create parallel-api-key --data-file=.parallel-secret
-Remove-Item .parallel-secret
-$firebaseApiKey = '<FIREBASE_WEB_API_KEY>'
-$firebaseProjectId = 'your-firebase-project-id'
-$firebaseAuthDomain = "$firebaseProjectId.firebaseapp.com"
-$allowedEmails = 'producer@example.com;admin@example.com'
-gcloud builds submit --config cloudbuild.yaml --substitutions="_FIREBASE_API_KEY=$firebaseApiKey,_FIREBASE_AUTH_DOMAIN=$firebaseAuthDomain,_FIREBASE_PROJECT_ID=$firebaseProjectId,_ALLOWED_EMAILS=$allowedEmails"
-~~~
-
-Grant the Cloud Run runtime service account roles/aiplatform.user, roles/datastore.user, and Secret Manager access to parallel-api-key. Enable Firebase Authentication for the same project and create a Web app before building. The /api/health endpoint reports configuration without exposing credentials.
-
-The supplied public hackathon deployment uses fictional production records. Firebase Authentication protects application APIs, an optional email allowlist limits account access, and `memberUids` enforces production membership. Firestore rules remain deny-by-default; server writes use IAM.
-
-## Validate
-
-~~~powershell
+```powershell
+npm.cmd run lint
 npm.cmd run typecheck
 npm.cmd test
 npm.cmd run build
-~~~
+npm.cmd audit --omit=dev
+```
 
-Live integration smoke test:
+The health endpoint is available at `/api/health`. It reports whether the process is in live or demo mode and whether the required server integrations are configured; it does not expose secret values.
 
-~~~powershell
-$body = @{ message = "Can we move Thursday's outdoor shoot to Saturday?"; productionId = "north-star" } | ConvertTo-Json
-Invoke-RestMethod http://localhost:3000/api/decision -Method Post -ContentType application/json -Body $body
-~~~
+## Security and responsible use
 
-A judged response must have mode live and six agent findings. HTTP 503 means credentials are missing; HTTP 502 means an upstream service failed.
+- All decision and production-management endpoints require a verified Firebase ID token.
+- The server verifies token signature, issuer, audience, expiry, verified email, and the configured email allowlist.
+- Server credentials remain server-side; only Firebase web configuration is exposed to the browser.
+- Request bodies are schema-validated before use.
+- Missing live integrations fail closed instead of presenting sample data as current evidence.
+- Upstream analysis failures state that no production records were changed.
+- Recommendations require human review before operational action.
 
-## Three-minute demo flow
+## Repository guide
 
-1. Show Thursday's exterior shoot and crew coverage.
-2. Ask: **Can we move Thursday's outdoor shoot to Saturday?**
-3. Show the six agent findings.
-4. Open one Parallel source, then show the recommendation, confidence, risks, and actions.
-5. Close with: “StudioCopilot turns hours of fragmented production coordination into one evidence-backed decision.”
+```text
+app/api/decision/                       Coordinated Parallel + Gemini workflow
+app/api/productions/[productionId]/     Protected schedule, crew, and location APIs
+components/studio-dashboard.tsx         Decision workspace
+components/production-modules.tsx       Editable production modules
+lib/firebase-server.ts                  Server-side Firebase token verification
+lib/parallel.ts                         Public-web research integration
+lib/gemini.ts                           Structured decision reasoning
+lib/firestore.ts                        Production persistence and decision logs
+cloudbuild.yaml                         Cloud Build and Cloud Run deployment
+firestore.rules                         Firestore access rules
+```
 
-Keep the video under three minutes, in English, and use only original or licensed material.
+## Licence
 
-## Data and limitations
-
-The repository contains fictional sample data only. Current public-web facts come from Parallel Search and retain source links. No permit submission, payroll, accounting, calendar integration, or automatic schedule mutation is performed. Costs are planning estimates. A human production manager remains accountable for call sheets and operational decisions.
-
-## Submission checklist
-
-- [ ] Deploy the live build to Cloud Run and add its URL to Devpost.
-- [ ] Confirm /api/health reports live mode and both integrations configured.
-- [ ] Make this repository public and add its URL to Devpost.
-- [x] Keep the top-level MIT LICENSE visible.
-- [ ] Publish the sub-three-minute YouTube or Vimeo demo.
-- [ ] Add every eligible team member, maximum four, to Devpost.
-- [ ] Submit before **2:00 PM PT on 9 September 2026**.
-
-## Findings and learnings
-
-Production decisions need provenance more than prose. Parallel supplies current public evidence; Gemini is most useful when constrained to reconcile that evidence with explicit production records. A fail-closed live mode and visibly limited demo mode avoid silently substituting fabricated search or weather data.
+This project is released under the [MIT Licence](LICENSE).
