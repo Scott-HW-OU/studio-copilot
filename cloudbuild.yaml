@@ -12,6 +12,6 @@ substitutions:
   _FIREBASE_API_KEY: configuration-required
   _FIREBASE_AUTH_DOMAIN: configuration-required.invalid
   _FIREBASE_PROJECT_ID: configuration-required
-  _ALLOWED_EMAILS: configuration-required.invalid
+  _ALLOWED_EMAILS: sphw1984@gmail.com;studio-co-pilot-judging@scott-hw.online
 options:
   logging: CLOUD_LOGGING_ONLY

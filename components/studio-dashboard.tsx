@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle, CalendarDays, Check, ChevronRight, CircleDollarSign, CloudRain,
   ExternalLink, Film, LogOut, MapPin, Menu, Radio, Search, Send, Sparkles, Users, X
@@ -18,6 +18,34 @@ const quickQuestions = [
   "What risks do we have for Thursday's shoot?",
   "What will a one-day delay cost?"
 ];
+
+function greetingForTime(now: Date | null) {
+  if (!now) return "Welcome";
+  if (now.getHours() < 12) return "Good morning";
+  if (now.getHours() < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatLocalDateTime(now: Date | null) {
+  if (!now) return "Loading local time…";
+  return now.toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short"
+  });
+}
+
+function userFirstName(displayName?: string | null, email?: string | null) {
+  const profileName = displayName?.trim().split(/\s+/)[0];
+  if (profileName) return profileName;
+  const emailName = email?.split("@")[0].split(/[._-]+/)[0];
+  return emailName ? emailName.charAt(0).toUpperCase() + emailName.slice(1) : "there";
+}
 
 const agentIcons = {
   production: CalendarDays,
@@ -55,9 +83,20 @@ export function StudioDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const [localNow, setLocalNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const refreshLocalTime = () => setLocalNow(new Date(Date.now()));
+    refreshLocalTime();
+    const timer = window.setInterval(refreshLocalTime, 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (authLoading) return <main className="auth-shell"><div className="module-loading">Checking your session…</div></main>;
   if (!user) return <AuthScreen />;
+
+  const firstName = userFirstName(user.displayName, user.email);
+  const avatarText = firstName.slice(0, 2).toUpperCase();
 
   async function askDecisionAgent() {
     if (loading || message.trim().length < 3) return;
@@ -108,9 +147,10 @@ export function StudioDashboard() {
       <section className="main-panel">
         <header className="topbar">
           <button className="menu" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu /></button>
-          <div><span className="eyebrow">PRODUCTION INTELLIGENCE</span><h1>Good morning, Alex</h1></div>
-          <div className="shoot-badge"><span>Next shoot</span><strong>Thu 3 Sep · 06:30</strong></div>
-          <div className="avatar">AM</div>
+          <div><span className="eyebrow">PRODUCTION INTELLIGENCE</span><h1>{greetingForTime(localNow)}, {firstName}</h1></div>
+          <div className="local-time"><span>Your local time</span><time dateTime={localNow?.toISOString()}>{formatLocalDateTime(localNow)}</time></div>
+          <div className="shoot-badge"><span>Next shoot</span><strong>Thu 17 Sep · 06:30</strong></div>
+          <div className="avatar" aria-label={`${firstName}'s profile`}>{avatarText}</div>
         </header>
 
         <div className="content">
@@ -149,7 +189,7 @@ export function StudioDashboard() {
           {error && <div className="error-banner" role="alert"><AlertTriangle size={18} /><div><strong>Analysis unavailable</strong><p>{error}</p></div></div>}
 
           {response && (
-            <section className="decision-output" aria-live="polite">
+            <section className="decision-output" id="decision-findings" aria-live="polite">
               <div className="output-heading">
                 <div>
                   <span className={"mode-badge " + response.mode}><Radio size={12} />{response.mode === "live" ? "LIVE ANALYSIS" : "DEMO ANALYSIS"}</span>
@@ -168,6 +208,24 @@ export function StudioDashboard() {
                 <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<ExternalLink size={12} /></a>)}</div>}
             </section>
           )}
+
+          <section className="panel risk-reports" id="risks" aria-labelledby="risk-reports-title">
+            <div className="panel-heading">
+              <div><small>RISK REPORTS</small><h3 id="risk-reports-title">Latest decision risks</h3></div>
+              <span className={response ? "risk-count active" : "risk-count"}>{response ? `${response.risks.length} identified` : "Awaiting analysis"}</span>
+            </div>
+            {response ? <div className="risk-report-list">
+              {response.risks.map((risk, index) => <a href="#decision-findings" key={risk}>
+                <span><AlertTriangle size={15} />Risk {index + 1}</span>
+                <strong>{risk}</strong>
+                <ChevronRight size={16} />
+              </a>)}
+            </div> : <div className="risk-empty">
+              <AlertTriangle size={20} />
+              <div><strong>No decision report yet</strong><p>Run the decision agent to populate this section with the latest production risks.</p></div>
+              <a href="#overview">Go to decision agent <ChevronRight size={14} /></a>
+            </div>}
+          </section>
 
           <section className="dashboard-grid">
             <article className="panel" id="schedule">

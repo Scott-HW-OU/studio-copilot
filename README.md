@@ -12,7 +12,7 @@ The result is a recommendation with confidence, risks, next actions, specialist 
 
 ## Judge walkthrough (about 3 minutes)
 
-Use the deployed application link and judge account supplied with the submission. Judge credentials are intentionally not stored in this public repository.
+Open the **[live StudioCopilot application](https://studiocopilot-w4gw56bdvq-nw.a.run.app)** and use the judge account supplied with the submission. Judge credentials are intentionally not stored in this public repository.
 
 1. **Sign in** with the supplied account. Firebase Authentication protects the workspace and server APIs.
 2. In **Command centre**, keep the prepared question — **“Can we move Thursday's outdoor shoot to Saturday?”** — and select **Analyse decision**.

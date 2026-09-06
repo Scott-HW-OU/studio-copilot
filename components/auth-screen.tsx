@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, sendEmailVerification, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 import { Film, LogIn } from "lucide-react";
 import { clientAuth, firebaseConfigured } from "@/lib/firebase-client";
 
 export function AuthScreen() {
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [registering, setRegistering] = useState(false);
@@ -24,6 +25,7 @@ export function AuthScreen() {
     try {
       if (registering) {
         const result = await createUserWithEmailAndPassword(clientAuth, email, password);
+        await updateProfile(result.user, { displayName: firstName.trim() });
         await sendEmailVerification(result.user, verificationSettings());
         await clientAuth.signOut();
         setError("Verification email sent. Verify the address, then sign in.");
@@ -55,13 +57,14 @@ export function AuthScreen() {
       <p>Sign in to manage schedules, crew records, locations and production decisions.</p>
       {!firebaseConfigured && <div className="auth-config">Firebase client configuration is missing. Add the NEXT_PUBLIC_FIREBASE_* variables before signing in.</div>}
       <form onSubmit={submit}>
+        {registering && <label>First name<input type="text" required autoComplete="given-name" maxLength={60} value={firstName} onChange={(event) => setFirstName(event.target.value)} /></label>}
         <label>Email<input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
         <label>Password<input type="password" required minLength={8} autoComplete={registering ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <button disabled={busy || !firebaseConfigured}><LogIn size={16} />{busy ? "Please wait…" : registering ? "Create account" : "Sign in"}</button>
       </form>
       <button className="google-button" disabled={busy || !firebaseConfigured} onClick={signInGoogle}>Continue with Google</button>
       {error && <div className="auth-message" role="alert">{error}</div>}
-      <button className="auth-switch" onClick={() => { setRegistering(!registering); setError(""); }}>
+      <button className="auth-switch" onClick={() => { setRegistering(!registering); setFirstName(""); setError(""); }}>
         {registering ? "Already registered? Sign in" : "Need an account? Register"}
       </button>
     </section>

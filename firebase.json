@@ -1,4 +1,19 @@
 {
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "StudioCopilot",
+        "supportEmail": "sphw1984@gmail.com",
+        "authorizedRedirectUris": [
+          "https://studiocopilot-w4gw56bdvq-nw.a.run.app"
+        ]
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "apphosting": {
     "backendId": "studio-copilot-be",
     "rootDir": "/",
